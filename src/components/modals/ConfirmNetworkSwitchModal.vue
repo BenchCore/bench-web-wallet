@@ -9,17 +9,17 @@
         <div class="ui header">
           Select network
         </div>
-        <!-- Main networks -->
+        <!-- Bench networks -->
         <div class="ui small header left aligned">
-          Main
-          <div v-if="wallet.open && networkType.label !== 'Main'" class="ui sub header center aligned">
+          Bench
+          <div v-if="wallet.open && networkType.label !== 'Bench'" class="ui sub header center aligned">
             Your wallet will be closed
           </div>
         </div>
         <div class="ui cards">
           <a v-for="net in mainNets" :key="net" class="ui card fluid"
              :class="{ 'green': currentEndpoint === net }"
-             @click.prevent="selectNetwork('Main', net)">
+             @click.prevent="selectNetwork('Bench', net)">
             <div class="content">
               <div v-if="currentEndpoint === net" class="left floated">
                 <i class="fa fa-check green"></i>
@@ -28,17 +28,17 @@
             </div>
           </a>
         </div>
-        <!-- Dev networkds -->
+        <!-- BenchTest networkds -->
         <div class="ui small header left aligned">
-          Dev
-          <div v-if="wallet.open && networkType.label !== 'Dev'" class="ui sub header center aligned">
+          BenchTest
+          <div v-if="wallet.open && networkType.label !== 'BenchTest'" class="ui sub header center aligned">
             Your wallet will be closed
           </div>
         </div>
         <div class="ui cards">
           <a v-for="net in devNets" :key="net" class="ui card fluid"
              :class="{ 'green': currentEndpoint === net }"
-             @click.prevent="selectNetwork('Dev', net)">
+             @click.prevent="selectNetwork('BenchTest', net)">
             <div class="content">
               <div v-if="currentEndpoint === net" class="left floated">
                 <i class="fa fa-check green"></i>
@@ -96,7 +96,7 @@ export default {
       if (this.$route.name === 'Wallet' &&
           network !== oldNetworkLabel) {
         this.$store.dispatch('closeWallet')
-        this.$router.push({ name: 'Main' })
+        this.$router.push({ name: 'Bench' })
       }
     },
     closeModal () {

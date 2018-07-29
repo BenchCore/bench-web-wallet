@@ -1,7 +1,7 @@
 <template>
   <div class="ui segment fluid center aligned footer">
     <div class="ui grid equal width center aligned">
-      <a target="_blank" href="https://github.com/willdn/AWW" class="column footer-link">
+      <a target="_blank" href="https://github.com/benchcore/bench-web-wallet" class="column footer-link">
         <i class="fa fa-github fa-lg"></i> Github
       </a>
       <a target="_blank" href="https://benchcore.io" class="column footer-link">

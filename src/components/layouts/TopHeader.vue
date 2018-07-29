@@ -1,7 +1,7 @@
 <template>
   <div class="ui menu top-header">
       <router-link :to="{ name: 'Main'}" class="header item">
-        Ark Web Wallet
+        Bench Web Wallet
       </router-link>
       <div  class="right menu">
         <div v-if="blockHeight" class="item mobile hidden">

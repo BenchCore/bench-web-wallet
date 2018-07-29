@@ -1,6 +1,6 @@
 <template>
   <div class="ui container center aligned">
-      <div v-if="networkType.label === 'Dev'" class="ui orange message">
+      <div v-if="networkType.label === 'Bench'" class="ui orange message">
         Key generated for the <b>DEV network</b>
       </div>
       <!-- QR keys -->

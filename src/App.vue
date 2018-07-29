@@ -53,7 +53,7 @@ export default {
     }
   },
   mounted () {
-    this.$store.dispatch('setNetwork', networkType.MAIN)
+    this.$store.dispatch('setNetwork', networkType.BENCH)
     this.getDBHeight()
     setInterval(() => {
       this.getDBHeight()
