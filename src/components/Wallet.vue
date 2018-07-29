@@ -1,0 +1,233 @@
+<template>
+  <div class="ui container center aligned">
+    <div v-if="wallet" class="ui segment raised center aligned">
+      <div class="ui equal width stackable grid">
+        <div class="ui column center aligned">
+          <img class="ui centered image" :src="QRAddress" />
+          {{ wallet.address }}<br />
+          <!-- Delegate -->
+          <span v-if="currentDelegate">
+            <b>{{ currentDelegate.username }}</b> (#{{ currentDelegate.rate }})
+          </span>
+          <a
+            v-clipboard="this.wallet.address"
+            @success="copySuccess()">
+            <i class="fa fa-copy"></i>
+          </a>
+        </div>
+        <div class="ui column middle aligned">
+          <div class="ui equal width grid center aligned">
+            <!-- Currency select -->
+            <div class="ui button compact basic"
+                @click.prevent="currencyModal()">
+              <i class="fa fa-money"></i>
+            </div>
+            <!-- Refresh button -->
+            <div class="ui button compact basic"
+                :class="{ 'disabled': balance == null || !transactions }"
+                @click.prevent="refresh()">
+              <i class="fa fa-refresh" :class="{ 'fa-spin': balance == null || !transactions }"></i>
+            </div>
+          </div>
+          <div class="ui equal width grid center aligned">
+            <!-- BEX Balance -->
+            <div class="ui column">
+              <div class="ui medium header">
+                <span v-if="balance == null"><i class="fa fa-spinner fa-spin"></i></span>
+                <span v-if="balance || balance === 0">{{ balance.toLocaleString() }}</span>
+                <div class="ui sub header">{{ networkType.symbol }}</div>
+              </div>
+            </div>
+            <!-- FIAT Balance -->
+            <div class="ui column">
+              <div class="ui medium header">
+                <span v-if="balance == null"><i class="fa fa-spinner fa-spin"></i></span>
+                <span v-if="balance || balance === 0">{{ balanceFiat.toLocaleString() }}</span>
+                <div class="ui sub header">{{ fiatCurrency.label }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Action menu -->
+    <div class="ui two item menu">
+      <a class="item"
+         :class="{ 'active teal': app.sendFormVisible }"
+         @click.prevent="toggleSendForm()">
+        <i class="fa fa-send-o"></i>
+        Send
+      </a>
+      <a class="item"
+         @click.prevent="toggleDelegateVote()"
+         :class="{ 'active teal': app.voteFormVisible }">
+        <i class="fa fa-thumbs-up"></i>
+        Vote
+      </a>
+    </div>
+    <!-- Send form -->
+    <send v-if="app.sendFormVisible"></send>
+    <!-- Delegate vote -->
+    <delegate-vote v-if="app.voteFormVisible"></delegate-vote>
+    <!-- Transaction header -->
+    <div class="ui header left aligned">
+      <i class="fa fa-exchange"></i>
+      <div class="content">
+        Transactions
+      </div>
+    </div>
+    <div v-if="!transactions" class="ui segment center aligned">
+      <i class="fa fa-spinner fa-spin"></i>
+      Loading transactions
+    </div>
+    <div v-if="transactions" class="ui cards">
+      <transaction v-for="transaction in transactions" :key="transaction.id" :tx="transaction"></transaction>
+    </div>
+    <div v-if="transactions && transactions.length === 0" class="ui segment center aligned">
+      No transactions
+    </div>
+    <!-- Currency select modal -->
+    <currency-modal></currency-modal>
+    <!-- Confirm transaction modal -->
+    <confirm-send-modal></confirm-send-modal>
+  </div>
+</template>
+
+<script>
+import { clipboardNotification } from '../api/notification'
+import * as api from '../api'
+import QRCode from 'qrcode'
+import * as bexjs from 'bexjs'
+// Components
+import CurrencyModal from './modals/CurrencyModal'
+import ConfirmSendModal from './modals/ConfirmSendModal'
+import Transaction from './Transaction'
+import Send from './Send'
+import DelegateVote from './DelegateVote'
+
+export default {
+  name: 'wallet',
+  components: {
+    CurrencyModal,
+    ConfirmSendModal,
+    Transaction,
+    Send,
+    DelegateVote
+  },
+  data () {
+    return {
+      timer: null,
+      transactions: null,
+      bexFiatValue: 0,
+      balance: null,
+      claimAmounts: null,
+      QRAddress: null
+    }
+  },
+  computed: {
+    wallet () {
+      return this.$store.getters.wallet
+    },
+    app () {
+      return this.$store.getters.app
+    },
+    fiatCurrency () {
+      return this.$store.getters.app.fiatCurrency
+    },
+    balanceFiat () {
+      if (api.isDevNetwork()) return 0
+      return this.bexFiatValue * this.balance
+    },
+    currentDelegate () {
+      return this.wallet.delegate
+    },
+    networkType () {
+      return this.$store.getters.networkType
+    }
+  },
+  watch: {
+    fiatCurrency () {
+      this.getBEXMarket()
+    }
+  },
+  methods: {
+    toggleSendForm () {
+      this.$store.dispatch('toggleSendForm')
+      this.$store.dispatch('toggleVoteForm', false)
+    },
+    toggleDelegateVote () {
+      this.$store.dispatch('toggleVoteForm')
+      this.$store.dispatch('toggleSendForm', false)
+    },
+    getBalance () {
+      bexjs.getBalance(this.wallet.address)
+        .then((balance) => {
+          this.balance = balance
+        })
+    },
+    getTransactions () {
+      bexjs.getTransactionsFromAddress(this.wallet.address, {
+        'orderBy': 'timestamp:desc'
+      })
+        .then((response) => {
+          this.transactions = response
+        })
+    },
+    refresh () {
+      this.transactions = null
+      this.balance = null
+      this.getTransactions()
+      this.getBalance()
+    },
+    copySuccess () {
+      clipboardNotification()
+    },
+    currencyModal () {
+      this.$modal.show('currencyModal')
+    },
+    getBEXMarket () {
+      api.getBEXMarket(this.fiatCurrency.id)
+        .then((res) => {
+          this.bexFiatValue = res.data[this.fiatCurrency.id]
+        })
+    }
+  },
+  beforeDestroy () {
+    clearInterval(this.timer)
+    this.$store.dispatch('closeWallet')
+  },
+  mounted () {
+    // Redirect if no wallet opened
+    if (!this.$store.getters.wallet.open) {
+      this.$router.push({ name: 'OpenWallet' })
+      return null
+    }
+    // Get current delegate
+    bexjs.getDelegatesFromAddress(this.$store.getters.wallet.address)
+      .then((delegate) => {
+        if (delegate && delegate.length > 0) {
+          this.$store.dispatch('setDelegate', delegate[0])
+        }
+      })
+    // this.$store.dispatch('setLoadingState', true)
+    this.getBalance()
+    this.getTransactions()
+    this.getBEXMarket()
+    this.timer = setInterval(() => {
+      this.getBalance()
+      this.getTransactions()
+      // this.getBEXMarket()
+    }, 10000)
+    this.$nextTick(() => {
+      QRCode.toDataURL(this.$store.getters.wallet.address, (err, url) => {
+        if (err) console.log(err)
+        this.QRAddress = url
+      })
+    })
+  }
+}
+</script>
+
+<style scoped>
+
+</style>
